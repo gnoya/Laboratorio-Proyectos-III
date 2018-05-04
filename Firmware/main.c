@@ -43,6 +43,7 @@
 /* User includes (#include below this line is not maintained by Processor Expert) */
 int estado = 1;
 unsigned char character;
+char line[50] = {0};
 
 void main(void){
   /* Write your local variable definition here */
@@ -56,15 +57,18 @@ void main(void){
 
   initialize();
   delayMS(100);
-  sendString("CR 18 32");
+  sendString("CR 18 32", 3);
   delayMS(100);
-  sendString("TW");
+  sendString("TW", 3);
   
   while(1){
-	  if (AS1_GetCharsInRxBuf() > 0){
+    readLine(&line);
+    sendString(line, 2);
+	  /*if (AS1_GetCharsInRxBuf() > 0){
 		  AS1_RecvChar(&character);
 		  AS2_SendChar(character);
-	  }
+	  }*/
+
   }
   
   

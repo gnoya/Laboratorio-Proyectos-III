@@ -11,18 +11,27 @@ extern char TC[40];
 
 
 
-void sendString(char string[]){
+void sendString(char string[], int choice){
 	int i;
 	for(i = 0; i < strlen(string); i++){
-		AS1_SendChar(string[i]);
-		AS2_SendChar(string[i]);
+    if(choice == 1){
+      AS1_SendChar(string[i]);
+    }
+    else if (choice == 2){
+      AS2_SendChar(string[i]);
+    }
+    else{
+      AS1_SendChar(string[i]);
+		  AS2_SendChar(string[i]);
+    }
+		
 	}
 	AS1_SendChar(13); // \r.
 	AS2_SendChar(13);
 }
 
 void initialize(){
-	sendString("RS");
+	sendString("RS", 3);
 	strcat(TC, redRange);
 	strcat(TC, greenRange);
 	strcat(TC, blueRange);
@@ -59,6 +68,18 @@ void sendSerial(char ascii){
 	AS2_SendChar(ascii);
 }
 
+void readLine(char *line[]){
+  char character;
+  int i = 0;
+  while(AS1_RecvChar(&character) != 13){
+    if(character != ERR_RXEMPTY){
+      *line[i] = character;
+      i++;
+    }
+  }
+}
+
 void delayMS(int ms){
 	Cpu_Delay100US(10*ms);
 }
+
