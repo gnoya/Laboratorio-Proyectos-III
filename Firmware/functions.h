@@ -17,5 +17,6 @@ void sendString(char string[], int choice);
 void initialize();
 int intToAscii(int number);
 void sendBigNumber(int number);
-void readLine(char *line[]);
+void readLine(char line[]);
 void delayMS(int ms);
+void getMassCenter(char line[]);

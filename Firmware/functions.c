@@ -8,30 +8,34 @@ extern char greenRange[10];
 extern char blueRange[10];
 extern char TC[40];
 
-
-
-
 void sendString(char string[], int choice){
 	int i;
 	for(i = 0; i < strlen(string); i++){
-    if(choice == 1){
-      AS1_SendChar(string[i]);
-    }
-    else if (choice == 2){
-      AS2_SendChar(string[i]);
-    }
-    else{
-      AS1_SendChar(string[i]);
+		if(choice == 1){
+		  AS1_SendChar(string[i]);
+		}
+		else if (choice == 2){
 		  AS2_SendChar(string[i]);
-    }
-		
+		}
+		else{
+		  AS1_SendChar(string[i]);
+		  AS2_SendChar(string[i]);
+		}
 	}
 	AS1_SendChar(13); // \r.
 	AS2_SendChar(13);
 }
 
+void delayMS(int ms){
+	Cpu_Delay100US(10*ms);
+}
+
 void initialize(){
+	// Asi se hace el reset.
+	AS1_SendChar(13); // \r.
 	sendString("RS", 3);
+	delayMS(10);
+	AS1_ClearRxBuf();
 	strcat(TC, redRange);
 	strcat(TC, greenRange);
 	strcat(TC, blueRange);
@@ -60,7 +64,7 @@ void sendBigNumber(int number){
 	for(i = 0; i < L; i++){
 		string[L - i - 1] = intToAscii(digits[i]);
 	}
-	sendString(string);
+	sendString(string, 3);
 }
 
 void sendSerial(char ascii){
@@ -68,18 +72,33 @@ void sendSerial(char ascii){
 	AS2_SendChar(ascii);
 }
 
-void readLine(char *line[]){
-  char character;
+void readLine(char line[]){
+  unsigned char charact;
   int i = 0;
-  while(AS1_RecvChar(&character) != 13){
-    if(character != ERR_RXEMPTY){
-      *line[i] = character;
+  int carryReturn = 13;
+
+  while(1){
+    if(AS1_RecvChar(&charact) != ERR_RXEMPTY){
+      if((int)charact == carryReturn) {
+    	  //AS2_SendChar(charact);
+    	  break;
+      }
+      line[i] = charact;
       i++;
+      //AS2_SendChar(charact);
     }
   }
 }
 
-void delayMS(int ms){
-	Cpu_Delay100US(10*ms);
+void getMassCenter(char line[]){
+	AS1_ClearRxBuf();
+	sendString(TC, 3);
+	readLine(line); // ACK
+	readLine(line); // Paquete M
+	AS1_SendChar(13); // Detenemos el envio de la camara
+	delayMS(1);
+	AS1_ClearRxBuf();
 }
+
+
 

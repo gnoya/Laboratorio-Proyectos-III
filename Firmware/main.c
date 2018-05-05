@@ -56,19 +56,15 @@ void main(void){
   /* For example: for(;;) { } */
 
   initialize();
-  delayMS(100);
-  sendString("CR 18 32", 3);
-  delayMS(100);
-  sendString("TW", 3);
+  
+  getMassCenter(line);
+  sendString(line, 2);
   
   while(1){
-    readLine(&line);
-    sendString(line, 2);
-	  /*if (AS1_GetCharsInRxBuf() > 0){
-		  AS1_RecvChar(&character);
-		  AS2_SendChar(character);
-	  }*/
-
+	/*if (AS1_GetCharsInRxBuf() > 0){
+	  AS1_RecvChar(&character);
+	  AS2_SendChar(character);
+	}*/
   }
   
   
