@@ -55,17 +55,20 @@ void main(void){
   /* Write your code here */
   /* For example: for(;;) { } */
 
-  initialize();
-  
-  getMassCenter(line);
-  sendString(line, 2);
+  initialize(line);
+  //delayMS(100);
   
   while(1){
 	/*if (AS1_GetCharsInRxBuf() > 0){
 	  AS1_RecvChar(&character);
 	  AS2_SendChar(character);
 	}*/
-  }
+	  
+	  getMassCenter(line);
+	  sendString(line, 2);
+	  delayMS(1000);
+  	  
+ }
   
   
   

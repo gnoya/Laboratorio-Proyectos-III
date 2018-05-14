@@ -8,8 +8,15 @@ extern char greenRange[10];
 extern char blueRange[10];
 extern char TC[40];
 
+void delayMS(int ms){
+	Cpu_Delay100US(10*ms);
+}
+
 void sendString(char string[], int choice){
 	int i;
+	//char carry = 0x0D;
+	//string[5] = (char) 13;
+	
 	for(i = 0; i < strlen(string); i++){
 		if(choice == 1){
 		  AS1_SendChar(string[i]);
@@ -22,24 +29,26 @@ void sendString(char string[], int choice){
 		  AS2_SendChar(string[i]);
 		}
 	}
-	AS1_SendChar(13); // \r.
-	AS2_SendChar(13);
+	
+	delayMS(20);
+	if(choice == 1){
+		AS1_SendChar(13); // \r.
+	}
+	else if(choice == 2){
+		AS2_SendChar(13); // \r.
+	}
+	else if(choice == 3){
+		AS1_SendChar(13); // \r.
+		AS2_SendChar(13); // \r.
+	}
+	else{
+		AS2_SendChar('A'); // \r.
+	}
 }
 
-void delayMS(int ms){
-	Cpu_Delay100US(10*ms);
-}
 
-void initialize(){
-	// Asi se hace el reset.
-	AS1_SendChar(13); // \r.
-	sendString("RS", 3);
-	delayMS(10);
-	AS1_ClearRxBuf();
-	strcat(TC, redRange);
-	strcat(TC, greenRange);
-	strcat(TC, blueRange);
-}
+
+
 
 int intToAscii(int number){
 	unsigned char ascii = number + '0';
@@ -77,10 +86,14 @@ void readLine(char line[]){
   int i = 0;
   int carryReturn = 13;
 
+  for(i = 0; i < 50; i++){
+	  line[i] = 0;
+  }
+  i = 0;
+  
   while(1){
     if(AS1_RecvChar(&charact) != ERR_RXEMPTY){
       if((int)charact == carryReturn) {
-    	  //AS2_SendChar(charact);
     	  break;
       }
       line[i] = charact;
@@ -90,14 +103,25 @@ void readLine(char line[]){
   }
 }
 
+void initialize(char line[]){
+	// Asi se hace el reset.
+	AS1_ClearRxBuf();
+	AS1_SendChar(13); // \r.
+	sendString("RS", 3);
+	delayMS(10);
+	AS1_ClearRxBuf();
+	strcat(TC, redRange);
+	strcat(TC, greenRange);
+	strcat(TC, blueRange);
+}
+
 void getMassCenter(char line[]){
-	AS1_ClearRxBuf();
-	sendString(TC, 3);
-	readLine(line); // ACK
-	readLine(line); // Paquete M
-	AS1_SendChar(13); // Detenemos el envio de la camara
-	delayMS(1);
-	AS1_ClearRxBuf();
+  AS1_ClearRxBuf();
+  sendString(TC, 1);
+  readLine(line); // ACK
+  readLine(line); // Paquete M.
+  AS1_SendChar(13); // Detenemos el envio de la camara
+  
 }
 
 
