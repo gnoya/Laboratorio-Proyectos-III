@@ -44,7 +44,8 @@
 int estado = 1;
 unsigned char character;
 char line[50] = {0};
-
+int x = 0;
+int y = 0;
 void main(void){
   /* Write your local variable definition here */
 
@@ -66,6 +67,7 @@ void main(void){
 	  
 	  getMassCenter(line);
 	  sendString(line, 2);
+	  getCoordinates(line, &x, &y);
 	  delayMS(1000);
   	  
  }

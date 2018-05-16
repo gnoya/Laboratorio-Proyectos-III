@@ -2,6 +2,7 @@
 #include "AS2.h"
 #include "Cpu.h"
 #include <string.h>
+#include <Math.h>
 
 extern char redRange[10];
 extern char greenRange[10];
@@ -46,8 +47,41 @@ void sendString(char string[], int choice){
 	}
 }
 
+int asciiToInt(char ascii){
+	return ascii - '0';
+}
 
-
+void getCoordinates(char line[], int *x, int *y){
+	int i = 0;
+	int j = 2;
+	*x = 0;
+	*y = 0;
+	
+	while(line[j] != ' '){
+		j++;
+	}
+	j--;
+	
+	i = j;
+	while(line[i] != ' '){
+		*x += asciiToInt(line[i]) * pow(10, j - i);
+		i--;
+	}
+	
+	
+	j += 2;
+	
+	while(line[j] != ' '){
+		j++;
+	}
+	j--;
+	
+	i = j;
+	while(line[i] != ' '){
+		*y += asciiToInt(line[i]) * pow(10, j - i);
+		i--;
+	}
+}
 
 
 int intToAscii(int number){
@@ -73,7 +107,7 @@ void sendBigNumber(int number){
 	for(i = 0; i < L; i++){
 		string[L - i - 1] = intToAscii(digits[i]);
 	}
-	sendString(string, 3);
+	sendString(string, 2);
 }
 
 void sendSerial(char ascii){

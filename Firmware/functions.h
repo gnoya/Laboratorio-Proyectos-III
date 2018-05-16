@@ -20,3 +20,5 @@ void sendBigNumber(int number);
 void readLine(char line[]);
 void delayMS(int ms);
 void getMassCenter(char line[]);
+void getCoordinates(char line[], int *x, int *y);
+int asciiToInt(char ascii);
