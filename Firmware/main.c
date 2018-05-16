@@ -32,6 +32,7 @@
 #include "Events.h"
 #include "AS1.h"
 #include "AS2.h"
+#include "AD1.h"
 #include <string.h>
 /* Include shared modules, which are used for whole project */
 #include "PE_Types.h"
@@ -46,6 +47,8 @@ unsigned char character;
 char line[50] = {0};
 int x = 0;
 int y = 0;
+unsigned short distance = 0;
+
 void main(void){
   /* Write your local variable definition here */
 
@@ -55,8 +58,9 @@ void main(void){
 
   /* Write your code here */
   /* For example: for(;;) { } */
-
+  AD1_Start();
   initialize(line);
+  
   //delayMS(100);
   
   while(1){
@@ -68,7 +72,12 @@ void main(void){
 	  getMassCenter(line);
 	  sendString(line, 2);
 	  getCoordinates(line, &x, &y);
-	  delayMS(1000);
+	  
+	  AD1_Measure(TRUE);
+	  AD1_GetValue16(&distance);
+	  distance = distance >> 4;
+	  
+	  delayMS(100);
   	  
  }
   
