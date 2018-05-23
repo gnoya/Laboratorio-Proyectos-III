@@ -59,24 +59,21 @@ rlocus(sys2rl)
 grid on
 title('Lugar Geometrico de las raices - motor verde')
 
-%% Simulacion de los motores (correr simulink)
-% figure
-% plot(t1,WnMot)
-% grid on;
+%% Nivelación de las respuestas.
+load('PIDmotorRojo.mat')
+load('PIDmotorVerde.mat')
+Crojo = pid(C.Kp,C.Ki,C.Kd,C.Tf);
+Cverde = pid(C1.Kp,C1.Ki,C1.Kd,C1.Tf);
 
+sysf_rojo=feedback(Crojo*sys1,1);
+sysf_verde=feedback(Cverde*sys2,1);
 
-% figure
-% plot(t1,WnMot)
-% grid on;
+figure
+step(sysf_rojo)
+title('Respuesta final - Motor Rojo')
+grid on
 
-%% Controlador PID
-
-
-%%%Motor rojo
-
-
-
-
-%%%Motor verde
-
-
+figure
+step(sysf_verde)
+title('Respuesta final - Motor Verde')
+grid on
