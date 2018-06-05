@@ -185,6 +185,17 @@ void Set_PWM2(unsigned short porcentaje, bool dir){
 	Bit2_PutVal(dir);
 }
 void Set_PWM(unsigned short porcentaje1, unsigned short porcentaje2, bool dir1, bool dir2){
-	Set_PWM1(porcentaje1, dir1);
-	Set_PWM2(porcentaje2, dir2);
+	if(dir1){
+		Set_PWM1(100 - porcentaje1, dir1);
+	} 
+	else{
+		Set_PWM1(porcentaje1, dir1);
+	}
+	
+	if(dir2){
+		Set_PWM2(100 - porcentaje2, dir2);
+	}
+	else{
+		Set_PWM2(porcentaje2, dir2);
+	}
 }

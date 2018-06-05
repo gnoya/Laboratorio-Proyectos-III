@@ -51,9 +51,11 @@ unsigned char character;
 char line[50] = {0};
 int x = 0;
 int y = 0;
+unsigned int lastX = 0;
+
 unsigned short distance = 0;
-unsigned short PWM1 = 45;
-unsigned short PWM2 = 45;
+unsigned short PWM1 = 50;
+unsigned short PWM2 = 50;
 
 void main(void){
   /* Write your local variable definition here */
@@ -89,17 +91,25 @@ void main(void){
 		  distance = distance >> 4;
 	
 		  if(x == 0){
-			  Set_PWM(PWM1, PWM2, 0, 1);
-			  delayMS(250);
-			  Set_PWM(0, 0, 0, 0);
-			  delayMS(500);
-		  } 
-		  else{  
+			  if(lastX < 40){
+				  Set_PWM(25, 25, 1, 0);
+			  }
+			  else{
+				  Set_PWM(25, 35, 0, 1);
+			  }
+		  }
+		  else{
+			  if(x > 0 && x <= 80){
+				  lastX = x;
+			  }
+			  
 			  if(distance < 1100){	
-				  if(x > 46){
-					  Set_PWM(PWM1 * 1.55, PWM2 , 0, 0);
+				  if(x > 43){
+					  Set_PWM(PWM1 * 1.45, PWM2 , 0, 0);
 				  }
-				  else if(x < 34){
+				  else if(x < 37){
+					  // PWM1 : derecho rojo
+					  // PWM2 : izquierdo verde
 					  Set_PWM(PWM1, PWM2 * 1.45 , 0, 0);
 				  }
 				  else {
