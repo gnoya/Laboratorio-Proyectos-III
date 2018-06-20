@@ -54,81 +54,99 @@ int y = 0;
 unsigned int lastX = 0;
 
 unsigned short distance = 0;
-unsigned short PWM1 = 50;
-unsigned short PWM2 = 50;
+unsigned short rightPWM = 50;
+unsigned short leftPWM = 50;
 
 void main(void){
-  /* Write your local variable definition here */
+/* Write your local variable definition here */
 
-  /*** Processor Expert internal initialization. DON'T REMOVE THIS CODE!!! ***/
-  PE_low_level_init();
-  /*** End of Processor Expert internal initialization.                    ***/
+/*** Processor Expert internal initialization. DON'T REMOVE THIS CODE!!! ***/
+PE_low_level_init();
+/*** End of Processor Expert internal initialization.                    ***/
 
-  /* Write your code here */
-  /* For example: for(;;) { } */
-  /***********************************************************
-   * */
-  //AD1_Start();
-  initialize(line);
-  delayMS(1000);
-  sendString(TC, 3);
-  
-  while(1){
-	/*
-	  if (AS1_GetCharsInRxBuf() > 0){
-	  AS1_RecvChar(&character);
-	  AS2_SendChar(character);
-	}
-	*/
-	  
-	  AS1_ClearRxBuf();
-		readLine(line);
-		getCoordinates(line, &x, &y);
-		sendString(line, 2);
+/* Write your code here */
+/* For example: for(;;) { } */
+/***********************************************************
+ * */
+//AD1_Start();
+initialize(line);
+delayMS(1000);
+sendString(TC, 3);
+//sendString("GM",3);
 
-		  AD1_Measure(TRUE);
-		  AD1_GetValue16(&distance);
-		  distance = distance >> 4;
+while(1){
 	
-		  if(x == 0){
-			  if(lastX < 40){
-				  Set_PWM(25, 25, 1, 0);
-			  }
-			  else{
-				  Set_PWM(25, 35, 0, 1);
-			  }
+	//AS2_ClearRxBuf();
+  
+	if (AS2_GetCharsInRxBuf() > 0){
+	  AS2_RecvChar(&character);
+  	  AS2_SendChar(character);
+  }
+
+	/*
+	//AS2_SendChar('a');
+	//delayMS(500);
+	
+	AS1_ClearRxBuf();
+    readLine(line);
+	//sendString2(line,2);
+	
+	getCoordinates(line, &x, &y);
+	sendString2(line, 2);
+	//sendString2(line, 2);
+
+	  AD1_Measure(TRUE);
+	  AD1_GetValue16(&distance);
+	  distance = distance >> 4;
+
+	  if(x == 0){
+		  if(lastX < 40){
+			  Set_PWM(25, 25, 1, 0);
+			  //setPWM(25, 25, 1, 0);
 		  }
 		  else{
-			  if(x > 0 && x <= 80){
-				  lastX = x;
+			  Set_PWM(25, 35, 0, 1);
+			  //setPWM(35, 25, 0, 1);
+		  }
+	  }
+	  else{
+		  if(x > 0 && x <= 80){
+			  lastX = x;
+		  }
+		  
+		  if(distance < 1100){	
+			  if(x > 43){
+				  Set_PWM(rightPWM * 1.45, leftPWM , 0, 0);
+				  //setPWM(leftPWM, rightPWM * 1.45, 1, 1);
 			  }
-			  
-			  if(distance < 1100){	
-				  if(x > 43){
-					  Set_PWM(PWM1 * 1.45, PWM2 , 0, 0);
-				  }
-				  else if(x < 37){
-					  // PWM1 : derecho rojo
-					  // PWM2 : izquierdo verde
-					  Set_PWM(PWM1, PWM2 * 1.45 , 0, 0);
-				  }
-				  else {
-					  Set_PWM(PWM1, PWM2 , 0, 0);
-				  }  
+			  else if(x < 37){
+				  // rightPWM : derecho rojo
+				  // leftPWM : izquierdo verde
+				  Set_PWM(rightPWM, leftPWM * 1.45 , 0, 0);
+				  //setPWM(leftPWM * 1.45, rightPWM, 1, 1);
 			  }
-			  else if (distance > 1100 && distance < 1400){
-				  Set_PWM(0, 0 , 0, 0);
-			  }
-			  else{
-				Set_PWM(PWM1, PWM2 , 1, 1);
-			  }
-		}
- }
-  
-  
-  
-  
-  
+			  else {
+				  Set_PWM(rightPWM, leftPWM , 0, 0);
+				  //setPWM(leftPWM, rightPWM, 1, 1);
+			  }  
+		  }
+		  else if (distance > 1100 && distance < 1400){
+			  Set_PWM(0, 0 , 0, 0);
+			  //setPWM(0, 0, 0, 0);
+		  }
+		  else{
+			Set_PWM(rightPWM, leftPWM , 1, 1);
+			//setPWM(leftPWM, rightPWM, 0, 0);
+		  }
+	}
+	*/
+}
+
+
+
+
+
+
   
   
   

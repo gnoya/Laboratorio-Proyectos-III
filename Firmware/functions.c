@@ -50,6 +50,26 @@ void sendString(char string[], int choice){
 	}
 }
 
+void sendString2(char string[], int choice){
+	int i;
+	//char carry = 0x0D;
+	//string[5] = (char) 13;
+	
+	for(i = 0; i < strlen(string); i++){
+		if(choice == 1){
+		  AS1_SendChar(string[i]);
+		}
+		else if (choice == 2){
+		  AS2_SendChar(string[i]);
+		}
+		else{
+		  AS1_SendChar(string[i]);
+		  AS2_SendChar(string[i]);
+		}
+	}
+	AS2_SendChar(13); // \r.
+}
+
 int asciiToInt(char ascii){
 	return ascii - '0';
 }
@@ -128,8 +148,6 @@ void readLine(char line[]){
   }
   i = 0;
   
-  
-  
   while(1){
 	//AS2_SendChar('w');
     if(AS1_RecvChar(&charact) != ERR_RXEMPTY){
@@ -141,6 +159,27 @@ void readLine(char line[]){
       line[i] = charact;
       i++;
       //AS2_SendChar(charact);
+    }
+  }
+}
+
+void readLine2(char line[]){
+  unsigned char charact;
+  int i = 0;
+
+  for(i = 0; i < 50; i++){
+	  line[i] = 0;
+  }
+  i = 0;
+  
+  while(1){
+    if(AS2_RecvChar(&charact) != ERR_RXEMPTY){
+      if((int)charact == 65) { // A
+    	  line[i] = charact;
+    	  break;
+      }
+      line[i] = charact;
+      i++;
     }
   }
 }
@@ -198,4 +237,8 @@ void Set_PWM(unsigned short porcentaje1, unsigned short porcentaje2, bool dir1, 
 	else{
 		Set_PWM2(porcentaje2, dir2);
 	}
+}
+
+void setPWM(unsigned short leftPWM, unsigned short rightPWM, bool leftDir, bool rightDir){
+	Set_PWM(rightPWM, leftPWM, !rightDir, !leftDir);
 }
