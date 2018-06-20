@@ -198,6 +198,7 @@ void  AS2_OnFreeTxBuf(void)
 void  AS1_OnFullRxBuf(void)
 {
   /* Write your code here ... */
+	AS2_SendChar('t');
 }
 
 /*

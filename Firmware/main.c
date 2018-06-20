@@ -33,6 +33,10 @@
 #include "AS1.h"
 #include "AS2.h"
 #include "AD1.h"
+#include "Bit1.h"
+#include "Bit2.h"
+#include "PWM1.h"
+#include "PWM2.h"
 #include <string.h>
 /* Include shared modules, which are used for whole project */
 #include "PE_Types.h"
@@ -47,7 +51,11 @@ unsigned char character;
 char line[50] = {0};
 int x = 0;
 int y = 0;
+unsigned int lastX = 0;
+
 unsigned short distance = 0;
+unsigned short PWM1 = 50;
+unsigned short PWM2 = 50;
 
 void main(void){
   /* Write your local variable definition here */
@@ -58,27 +66,63 @@ void main(void){
 
   /* Write your code here */
   /* For example: for(;;) { } */
-  AD1_Start();
+  /***********************************************************
+   * */
+  //AD1_Start();
   initialize(line);
-  
-  //delayMS(100);
+  delayMS(1000);
+  sendString(TC, 3);
   
   while(1){
-	/*if (AS1_GetCharsInRxBuf() > 0){
+	/*
+	  if (AS1_GetCharsInRxBuf() > 0){
 	  AS1_RecvChar(&character);
 	  AS2_SendChar(character);
-	}*/
+	}
+	*/
 	  
-	  getMassCenter(line);
-	  sendString(line, 2);
-	  getCoordinates(line, &x, &y);
-	  
-	  AD1_Measure(TRUE);
-	  AD1_GetValue16(&distance);
-	  distance = distance >> 4;
-	  
-	  delayMS(100);
-  	  
+	  AS1_ClearRxBuf();
+		readLine(line);
+		getCoordinates(line, &x, &y);
+		sendString(line, 2);
+
+		  AD1_Measure(TRUE);
+		  AD1_GetValue16(&distance);
+		  distance = distance >> 4;
+	
+		  if(x == 0){
+			  if(lastX < 40){
+				  Set_PWM(25, 25, 1, 0);
+			  }
+			  else{
+				  Set_PWM(25, 35, 0, 1);
+			  }
+		  }
+		  else{
+			  if(x > 0 && x <= 80){
+				  lastX = x;
+			  }
+			  
+			  if(distance < 1100){	
+				  if(x > 43){
+					  Set_PWM(PWM1 * 1.45, PWM2 , 0, 0);
+				  }
+				  else if(x < 37){
+					  // PWM1 : derecho rojo
+					  // PWM2 : izquierdo verde
+					  Set_PWM(PWM1, PWM2 * 1.45 , 0, 0);
+				  }
+				  else {
+					  Set_PWM(PWM1, PWM2 , 0, 0);
+				  }  
+			  }
+			  else if (distance > 1100 && distance < 1400){
+				  Set_PWM(0, 0 , 0, 0);
+			  }
+			  else{
+				Set_PWM(PWM1, PWM2 , 1, 1);
+			  }
+		}
  }
   
   

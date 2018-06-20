@@ -34,9 +34,14 @@
 #include "PE_Error.h"
 #include "PE_Const.h"
 #include "IO_Map.h"
+#include "PE_Timer.h"
 #include "AS1.h"
 #include "AS2.h"
 #include "AD1.h"
+#include "Bit1.h"
+#include "Bit2.h"
+#include "PWM1.h"
+#include "PWM2.h"
 
 
 void AS1_OnError(void);
