@@ -78,10 +78,12 @@ while(1){
 	
 	//AS2_ClearRxBuf();
   
+  /*
 	if (AS2_GetCharsInRxBuf() > 0){
 	  AS2_RecvChar(&character);
   	  AS2_SendChar(character);
-  }
+  }*/
+
 
 	/*
 	//AS2_SendChar('a');
