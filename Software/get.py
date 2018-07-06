@@ -7,17 +7,38 @@ import math
 
 # Define the IP address and Port of the Server.
 
-#serialPort = serial.Serial('COM3', 9600)
+serialPort = serial.Serial('COM3', 9600, timeout=5)
 ip_address = "127.0.0.1"
 port = "8000"
 loopTime = 0.025 # Intervalo de loop en segundos.
 
-myFrontColor = 'YELLOW'
+myFrontColor = 'ORANGE'
+myFrontColor2 = "CYAN"
 myBackColor = 'BLUE'
 enemyFrontColor = 0
 enemyBackColor = 0
 targetBallColor = 'RED'
-enemyBallColor = 0
+enemyBallColor = 'YELLOW'
+
+# Potencial.
+celdas= 12
+dim=1.0
+disceldas=dim/celdas
+error=0
+vPre=np.zeros((celdas,celdas))
+vNow=np.zeros((celdas,celdas))
+columpos, filapos=[], []
+limitError=1
+dicangle=[135,112.5,90,67.5,45,137.5,135,90,45,22.5,180,180,999,0,0,202.5,225,270,315,337.5,225,247.5,270,292.5,315]
+ballPotential = 50000
+
+# Controladores.
+angleOffset = 5
+# forwardMaxAngle = 20
+# forward = False
+lastRotationalError = 0
+minRotatingPWM = 25
+angleIntegrative = 0
 
 class Ball:
   def __init__(self, x, y, radius, color):
@@ -53,7 +74,7 @@ class Robot:
     return angleBetween
 
   def calculateDistance(self, ball):
-    distance = math.sqrt(math.pow((self.x - ball.x)) + math.pow((self.y - ball.y)))
+    distance = math.sqrt(math.pow((self.x - ball.x), 2) + math.pow((self.y - ball.y), 2))
     return distance
 
 def createBall(response):
@@ -68,7 +89,7 @@ def classifyBall(ball, targetBalls, enemyBalls):
     targetBalls.append(ball)
   elif ball.color == enemyBallColor:
     enemyBalls.append(ball)
-  elif ball.color == myFrontColor:
+  elif ball.color == myFrontColor or ball.color == myFrontColor2:
     myRobot.frontBall = ball
   elif ball.color == myBackColor:
     myRobot.backBall = ball
@@ -107,7 +128,67 @@ def setMotors(leftPwm, rightPwm, leftDirection, rightDirection):
   leftMotor(leftPwm, leftDirection)
   rightMotor(rightPwm, rightDirection)
 
+def GetCelda(disfila,discolum):
+  celdacolum=(int)(discolum/disceldas)
+  if(celdacolum >= 10):
+      celdacolum=9
+  celdafila=(celdas-1)-(int)(disfila/disceldas)
+  return celdafila,celdacolum 
+
+def SetBall (x,y,V, vNow, filapos, columpos):
+  fila,colum=GetCelda(y,x)
+  vNow[fila][colum]=V
+  columpos.append(colum)
+  filapos.append(fila)
+  return None
+
+def Indexes(value, array):
+  return [i for (y,i) in zip (array, range(len(array))) if value==y]
+
+def CheckBall(fila,colum, filapos, columpos):
+  A=Indexes(colum,columpos)
+  for i in range(len(A)):
+    if filapos[A[i]]==fila:
+        return True
+    else:
+      return False
+
+def MatrizPotencial(error,vPre,vNow, filapos, columpos):
+  while error>limitError:
+    for z in range(1,celdas-2):
+      for j in range(1,celdas-2):
+        if not CheckBall(z,j, filapos, columpos):
+          vNow[z][j]=(vNow[z-1][j]+vNow[z+1][j]+vNow[z][j-1]+vNow[z][j+1])/4
+
+    error=np.max(np.absolute(vNow)-np.absolute(vPre))
+    vPre=np.copy(vNow)
+  return None
+
+def Getangle(matriz,xcar,ycar,anglecar):
+  filacar,columcar=GetCelda(ycar,xcar)
+  aux=matriz[filacar-2:filacar+3,columcar-2:columcar+3]
+  dif = dicangle[np.argmax(aux)]-anglecar
+  if dif > 180:
+    dif -= 360
+  elif dif < -180:
+    dif += 360
+  return dif
+
+def anglePDController(error, lastError, angleIntegrative):
+  Kp = 0.15
+  Kd = 2
+  Ki = 0
+  angleIntegrative += lastError
+  direction = True
+  if error < 0: 
+    direction = False
+  return Kp * error + Kd * (error - lastError) + Ki * angleIntegrative, direction
+
 def loop(): 
+  global forward
+  global lastRotationalError
+  global angleIntegrative
+
   r = requests.get("http://" + ip_address + ":" + port)
   responses = r.json()
   targetBalls = []
@@ -121,86 +202,55 @@ def loop():
   myRobot.updateAngle()
 
   # Calcular la bola mas cercana: nearestBall
-  nearestBall = targetBalls[0]
-  distance = myRobot.calculateDistance(nearestBall)
-  differenceAngle = myRobot.calculateAngle(nearestBall) # Si el angulo es positivo hay que girar a la izquierda.
-  print("Distancia:", distance)
-  print("Diferencia de angulo:", differenceAngle)
-  if(differenceAngle > 7.5):
-    setMotors(25, 25, 0, 1)
-  elif(differenceAngle < -7.5):
-    setMotors(25, 25, 1, 0)
-  else:
-    setMotors(0, 0, 1, 1)
-  serialPort.read(1)
+  if(len(targetBalls) > 0):
+    nearestBall = targetBalls[0]
 
+    # Potencial
+    vPre=np.zeros((celdas,celdas))
+    vNow=np.zeros((celdas,celdas))
+    columpos, filapos=[], []
+    SetBall(nearestBall.x, nearestBall.y, ballPotential, vNow, filapos, columpos)
+    error=np.max(np.absolute(vNow)-np.absolute(vPre))
+    MatrizPotencial(error,vPre,vNow, filapos, columpos)
+
+    # Controladores.
+    angleError = Getangle(vNow, myRobot.x, myRobot.y, myRobot.angle)
+    print("Error:", angleError)
+    
+    if(abs(angleError) < angleOffset):
+      print("Estabilizado")
+      stop()
+    else:
+      PD, direction = anglePDController(angleError, lastRotationalError, angleIntegrative)
+      # Se toma el valor absoluto para tomar en cuenta los ángulos negativos.
+      PD = abs(PD)
+      if(PD > minRotatingPWM):
+        PD = minRotatingPWM
+      PWM = minRotatingPWM + PD
+      
+      setMotors(PWM, PWM, int(not direction), int(direction)) # direction: 1 antihorario. 0 horario.
+
+      lastRotationalError = angleError
+      serialPort.read(1)
+      print("PWM:", PWM)
+      print(" ")
+      
 myRobot = Robot(Ball(45, 45, 0, 0), Ball(0, 0, 0, 0))
-ball = Ball(0, 90, None, None)
 
-myRobot.updateCoordinates()
-myRobot.updateAngle()
-differenceAngle = myRobot.calculateAngle(ball) # Si el angulo es positivo hay que girar a la izquierda.
-
-print(differenceAngle)
-
-# while(1){
-#   loop()
-# }
+while(1):
+  loop()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# asd = "F1111A"
-# das = "X2341A"
-# port.write(asd.encode())
-# port.write(das.encode())
-# data = port.read(6)
-# print(data)
-# data = port.read(6)
-# print(data)
-
-
-# balls = len(responses)
-# print("Enviando")
-# serialPort.write(str(balls).encode())
-# print("Recibido:")
-# data = serialPort.read(1)
-# print(data)
 
 # def test():
-#   setMotors(30, 80, 0, 1)
+#   setMotors(0, 0, 1, 1)
 #   # leftMotor(0, 1)
 #   print("Esperando")
-#   data = serialPort.read(6)
+#   data = serialPort.read(1)
 #   print(data)
 
 # test()
 
-# def testRobot():
-#   myRobot.updateAngle()
-#   print(myRobot.angle)
 
-# testRobot()
+
