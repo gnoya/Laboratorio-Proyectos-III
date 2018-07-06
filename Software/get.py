@@ -4,6 +4,7 @@ import serial
 import time
 import numpy as np
 import math
+import sys
 
 # Define the IP address and Port of the Server.
 
@@ -42,9 +43,9 @@ angleIntegrative = 0
 
 # Longitudinal
 forward = False
-forwardMaxAngle = 20
-longitudalPWM = 30
-maxLongitudinalPD = 10
+forwardMaxAngle = 10
+longitudalPWM = 45
+maxLongitudinalPD = 15
 lastLongitudinalError = 0
 longitudinalIntegrative = 0
 
@@ -193,7 +194,7 @@ def rotationalPDController(error, lastError, integrativeError):
   return Kp * error + Kd * (error - lastError) + Ki * integrativeError, direction
 
 def longitudinalPDController(error, lastError, integrativeError):
-  Kp = 1
+  Kp = 5
   Kd = 0
   Ki = 0
   integrativeError += lastError
@@ -203,6 +204,7 @@ def loop():
   global forward
   global lastRotationalError
   global angleIntegrative
+  global lastLongitudinalError
 
   r = requests.get("http://" + ip_address + ":" + port)
   responses = r.json()
@@ -248,31 +250,34 @@ def loop():
 
       lastRotationalError = angleError
       serialPort.read(2)
-      print("PWM:", PWM)
-      print(" ")
     else:
       if(abs(angleError) > forwardMaxAngle):
         forward = False
-      print("Forward")
-      stop()
-      serialPort.read(2)
-      # PD = longitudinalPDController(angleError, lastLongitudinalError, longitudinalIntegrative)
-      # PD = abs(PD)
-      # if(PD > maxLongitudinalPD):
-      #   PD = maxLongitudinalPD
-      # if(angleError >= 0):
-      #   setMotors(longitudalPWM, longitudalPWM + PD, 1, 1)
-      # else:
-      #   setMotors(longitudalPWM + PD, longitudalPWM, 1, 1)
+      PD = longitudinalPDController(angleError, lastLongitudinalError, longitudinalIntegrative)
+      PD = abs(PD)
+      if(PD > maxLongitudinalPD):
+        PD = maxLongitudinalPD
+      if(angleError >= 0):
+        print("PWMS: Left:", longitudalPWM, "Right:", (longitudalPWM+PD))
+        setMotors(longitudalPWM, longitudalPWM + PD, 1, 1)
+      else:
+        print("PWMS: Left:", (longitudalPWM + PD), "Right:", longitudalPWM)
+        setMotors(longitudalPWM + PD, longitudalPWM, 1, 1)
 
-      # lastLongitudinalError = angleError
-      # serialPort.read(1)
+      lastLongitudinalError = angleError
+      serialPort.read(2)
       
       
 myRobot = Robot(Ball(45, 45, 0, 0), Ball(0, 0, 0, 0))
 
 while(1):
-  loop()
+  try:
+    loop()
+    #setMotors(30, 60, 1, 1)
+  except KeyboardInterrupt:
+    stop()
+    print("Detener")
+    sys.exit()
 
 
 
