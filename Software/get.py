@@ -33,12 +33,20 @@ dicangle=[135,112.5,90,67.5,45,137.5,135,90,45,22.5,180,180,999,0,0,202.5,225,27
 ballPotential = 50000
 
 # Controladores.
+
+# Rotacional
 angleOffset = 5
-# forwardMaxAngle = 20
-# forward = False
 lastRotationalError = 0
 minRotatingPWM = 25
 angleIntegrative = 0
+
+# Longitudinal
+forward = False
+forwardMaxAngle = 20
+longitudalPWM = 30
+maxLongitudinalPD = 10
+lastLongitudinalError = 0
+longitudinalIntegrative = 0
 
 class Ball:
   def __init__(self, x, y, radius, color):
@@ -128,15 +136,15 @@ def setMotors(leftPwm, rightPwm, leftDirection, rightDirection):
   leftMotor(leftPwm, leftDirection)
   rightMotor(rightPwm, rightDirection)
 
-def GetCelda(disfila,discolum):
+def getCell(disfila,discolum):
   celdacolum=(int)(discolum/disceldas)
   if(celdacolum >= 10):
       celdacolum=9
   celdafila=(celdas-1)-(int)(disfila/disceldas)
   return celdafila,celdacolum 
 
-def SetBall (x,y,V, vNow, filapos, columpos):
-  fila,colum=GetCelda(y,x)
+def setBall(x,y,V, vNow, filapos, columpos):
+  fila,colum=getCell(y,x)
   vNow[fila][colum]=V
   columpos.append(colum)
   filapos.append(fila)
@@ -145,7 +153,7 @@ def SetBall (x,y,V, vNow, filapos, columpos):
 def Indexes(value, array):
   return [i for (y,i) in zip (array, range(len(array))) if value==y]
 
-def CheckBall(fila,colum, filapos, columpos):
+def checkBall(fila,colum, filapos, columpos):
   A=Indexes(colum,columpos)
   for i in range(len(A)):
     if filapos[A[i]]==fila:
@@ -153,19 +161,19 @@ def CheckBall(fila,colum, filapos, columpos):
     else:
       return False
 
-def MatrizPotencial(error,vPre,vNow, filapos, columpos):
+def matrizPotencial(error,vPre,vNow, filapos, columpos):
   while error>limitError:
     for z in range(1,celdas-2):
       for j in range(1,celdas-2):
-        if not CheckBall(z,j, filapos, columpos):
+        if not checkBall(z,j, filapos, columpos):
           vNow[z][j]=(vNow[z-1][j]+vNow[z+1][j]+vNow[z][j-1]+vNow[z][j+1])/4
 
     error=np.max(np.absolute(vNow)-np.absolute(vPre))
     vPre=np.copy(vNow)
   return None
 
-def Getangle(matriz,xcar,ycar,anglecar):
-  filacar,columcar=GetCelda(ycar,xcar)
+def getAngle(matriz,xcar,ycar,anglecar):
+  filacar,columcar=getCell(ycar,xcar)
   aux=matriz[filacar-2:filacar+3,columcar-2:columcar+3]
   dif = dicangle[np.argmax(aux)]-anglecar
   if dif > 180:
@@ -174,15 +182,22 @@ def Getangle(matriz,xcar,ycar,anglecar):
     dif += 360
   return dif
 
-def anglePDController(error, lastError, angleIntegrative):
+def rotationalPDController(error, lastError, integrativeError):
   Kp = 0.15
   Kd = 2
   Ki = 0
-  angleIntegrative += lastError
+  integrativeError += lastError
   direction = True
   if error < 0: 
     direction = False
-  return Kp * error + Kd * (error - lastError) + Ki * angleIntegrative, direction
+  return Kp * error + Kd * (error - lastError) + Ki * integrativeError, direction
+
+def longitudinalPDController(error, lastError, integrativeError):
+  Kp = 1
+  Kd = 0
+  Ki = 0
+  integrativeError += lastError
+  return Kp * error + Kd * (error - lastError) + Ki * integrativeError
 
 def loop(): 
   global forward
@@ -209,19 +224,20 @@ def loop():
     vPre=np.zeros((celdas,celdas))
     vNow=np.zeros((celdas,celdas))
     columpos, filapos=[], []
-    SetBall(nearestBall.x, nearestBall.y, ballPotential, vNow, filapos, columpos)
+    setBall(nearestBall.x, nearestBall.y, ballPotential, vNow, filapos, columpos)
     error=np.max(np.absolute(vNow)-np.absolute(vPre))
-    MatrizPotencial(error,vPre,vNow, filapos, columpos)
+    matrizPotencial(error,vPre,vNow, filapos, columpos)
 
     # Controladores.
-    angleError = Getangle(vNow, myRobot.x, myRobot.y, myRobot.angle)
+    angleError = getAngle(vNow, myRobot.x, myRobot.y, myRobot.angle)
     print("Error:", angleError)
     
     if(abs(angleError) < angleOffset):
-      print("Estabilizado")
-      stop()
-    else:
-      PD, direction = anglePDController(angleError, lastRotationalError, angleIntegrative)
+      #print("Estabilizado")
+      forward = True
+
+    if(not forward):
+      PD, direction = rotationalPDController(angleError, lastRotationalError, angleIntegrative)
       # Se toma el valor absoluto para tomar en cuenta los ángulos negativos.
       PD = abs(PD)
       if(PD > minRotatingPWM):
@@ -231,9 +247,27 @@ def loop():
       setMotors(PWM, PWM, int(not direction), int(direction)) # direction: 1 antihorario. 0 horario.
 
       lastRotationalError = angleError
-      serialPort.read(1)
+      serialPort.read(2)
       print("PWM:", PWM)
       print(" ")
+    else:
+      if(abs(angleError) > forwardMaxAngle):
+        forward = False
+      print("Forward")
+      stop()
+      serialPort.read(2)
+      # PD = longitudinalPDController(angleError, lastLongitudinalError, longitudinalIntegrative)
+      # PD = abs(PD)
+      # if(PD > maxLongitudinalPD):
+      #   PD = maxLongitudinalPD
+      # if(angleError >= 0):
+      #   setMotors(longitudalPWM, longitudalPWM + PD, 1, 1)
+      # else:
+      #   setMotors(longitudalPWM + PD, longitudalPWM, 1, 1)
+
+      # lastLongitudinalError = angleError
+      # serialPort.read(1)
+      
       
 myRobot = Robot(Ball(45, 45, 0, 0), Ball(0, 0, 0, 0))
 

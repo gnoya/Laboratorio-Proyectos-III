@@ -54,9 +54,10 @@ int y = 0;
 unsigned int lastX = 0;
 
 unsigned short distance = 0;
-unsigned short rightPWM = 50;
-unsigned short leftPWM = 50;
-
+unsigned short rightPWM = 0;
+unsigned short leftPWM = 0;
+unsigned short leftDirection = 1;
+unsigned short rightDirection = 1;
 void main(void){
 /* Write your local variable definition here */
 
@@ -69,79 +70,21 @@ PE_low_level_init();
 /***********************************************************
  * */
 //AD1_Start();
-initialize(line);
-delayMS(1000);
-sendString(TC, 3);
+//initialize(line);
+//delayMS(1000);
+//sendString(TC, 3);
 //sendString("GM",3);
 
 while(1){
 	
-	//AS2_ClearRxBuf();
-  
-  /*
 	if (AS2_GetCharsInRxBuf() > 0){
-	  AS2_RecvChar(&character);
-  	  AS2_SendChar(character);
-  }*/
-
-
-	/*
-	//AS2_SendChar('a');
-	//delayMS(500);
-	
-	AS1_ClearRxBuf();
-    readLine(line);
-	//sendString2(line,2);
-	
-	getCoordinates(line, &x, &y);
-	sendString2(line, 2);
-	//sendString2(line, 2);
-
-	  AD1_Measure(TRUE);
-	  AD1_GetValue16(&distance);
-	  distance = distance >> 4;
-
-	  if(x == 0){
-		  if(lastX < 40){
-			  Set_PWM(25, 25, 1, 0);
-			  //setPWM(25, 25, 1, 0);
-		  }
-		  else{
-			  Set_PWM(25, 35, 0, 1);
-			  //setPWM(35, 25, 0, 1);
-		  }
-	  }
-	  else{
-		  if(x > 0 && x <= 80){
-			  lastX = x;
-		  }
-		  
-		  if(distance < 1100){	
-			  if(x > 43){
-				  Set_PWM(rightPWM * 1.45, leftPWM , 0, 0);
-				  //setPWM(leftPWM, rightPWM * 1.45, 1, 1);
-			  }
-			  else if(x < 37){
-				  // rightPWM : derecho rojo
-				  // leftPWM : izquierdo verde
-				  Set_PWM(rightPWM, leftPWM * 1.45 , 0, 0);
-				  //setPWM(leftPWM * 1.45, rightPWM, 1, 1);
-			  }
-			  else {
-				  Set_PWM(rightPWM, leftPWM , 0, 0);
-				  //setPWM(leftPWM, rightPWM, 1, 1);
-			  }  
-		  }
-		  else if (distance > 1100 && distance < 1400){
-			  Set_PWM(0, 0 , 0, 0);
-			  //setPWM(0, 0, 0, 0);
-		  }
-		  else{
-			Set_PWM(rightPWM, leftPWM , 1, 1);
-			//setPWM(leftPWM, rightPWM, 0, 0);
-		  }
+		readLine2(line);
+		//sendString2(line, 2);
+		getMotorData(line, &leftPWM, &rightPWM, &leftDirection, &rightDirection);
+		setPWM(leftPWM, rightPWM, leftDirection, rightDirection);
+		AS2_SendChar('A');
+		
 	}
-	*/
 }
 
 
