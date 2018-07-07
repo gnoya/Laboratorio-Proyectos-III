@@ -11,7 +11,6 @@ import sys
 serialPort = serial.Serial('COM3', 9600, timeout=5)
 ip_address = "127.0.0.1"
 port = "8000"
-loopTime = 0.025 # Intervalo de loop en segundos.
 
 myFrontColor = 'ORANGE'
 myFrontColor2 = "CYAN"
@@ -22,16 +21,17 @@ targetBallColor = 'RED'
 enemyBallColor = 'YELLOW'
 
 # Potencial.
-celdas= 12
-dim=1.0
-disceldas=dim/celdas
-error=0
-vPre=np.zeros((celdas,celdas))
-vNow=np.zeros((celdas,celdas))
+celdas = 12
+dim = 1.0
+disceldas = dim/celdas
+error = 0
+vPre = np.zeros((celdas,celdas))
+vNow = np.zeros((celdas,celdas))
 columpos, filapos=[], []
-limitError=1
-dicangle=[135,112.5,90,67.5,45,137.5,135,90,45,22.5,180,180,999,0,0,202.5,225,270,315,337.5,225,247.5,270,292.5,315]
-ballPotential = 50000
+limitError = 1
+dicangle = [135, 112.5, 90, 67.5, 45, 137.5, 135, 90, 45, 22.5, 180, 180, 999, 0, 0, 202.5, 225, 270, 315, 337.5, 225, 247.5, 270, 292.5, 315]
+targetBallPotential = 50000
+enemyBallPotential = -10000
 
 # Controladores.
 
@@ -218,17 +218,25 @@ def loop():
   myRobot.updateCoordinates()
   myRobot.updateAngle()
 
-  # Calcular la bola mas cercana: nearestBall
-  if(len(targetBalls) > 0):
-    nearestBall = targetBalls[0]
+  if(len(targetBalls) > 0 or len(enemyBallColor) > 0):
+    # Calcular la bola mas cercana: nearestBall
 
     # Potencial
-    vPre=np.zeros((celdas,celdas))
-    vNow=np.zeros((celdas,celdas))
-    columpos, filapos=[], []
-    setBall(nearestBall.x, nearestBall.y, ballPotential, vNow, filapos, columpos)
-    error=np.max(np.absolute(vNow)-np.absolute(vPre))
-    matrizPotencial(error,vPre,vNow, filapos, columpos)
+    vPre = np.zeros((celdas, celdas))
+    vNow = np.zeros((celdas, celdas))
+    columpos, filapos = [], []
+
+    for ball in targetBalls:
+      setBall(ball.x, ball.y, targetBallPotential, vNow, filapos, columpos)
+    
+    for ball in enemyBalls:
+      setBall(ball.x, ball.y, enemyBallPotential, vNow, filapos, columpos)
+
+    nearestBall = targetBalls[0]
+    
+    error = np.max(np.absolute(vNow) - np.absolute(vPre))
+    matrizPotencial(error, vPre, vNow, filapos, columpos)
+
 
     # Controladores.
     angleError = getAngle(vNow, myRobot.x, myRobot.y, myRobot.angle)
@@ -245,7 +253,6 @@ def loop():
       if(PD > minRotatingPWM):
         PD = minRotatingPWM
       PWM = minRotatingPWM + PD
-      
       setMotors(PWM, PWM, int(not direction), int(direction)) # direction: 1 antihorario. 0 horario.
 
       lastRotationalError = angleError
