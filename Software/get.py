@@ -12,9 +12,9 @@ serialPort = serial.Serial('COM3', 9600, timeout=5)
 ip_address = "127.0.0.1"
 port = "8000"
 
-myFrontColor = 'ORANGE'
+myFrontColor = "BLACK"
 myFrontColor2 = "CYAN"
-myBackColor = 'BLUE'
+myBackColor = "BLUE"
 enemyFrontColor = 0
 enemyBackColor = 0
 targetBallColor = 'RED'
@@ -25,13 +25,13 @@ celdas = 12
 dim = 1.0
 disceldas = dim/celdas
 error = 0
-vPre = np.zeros((celdas,celdas))
-vNow = np.zeros((celdas,celdas))
+vPre = 5 * np.ones((celdas,celdas))
+vNow = 5 * np.ones((celdas,celdas))
 columpos, filapos=[], []
 limitError = 1
 dicangle = [135, 112.5, 90, 67.5, 45, 137.5, 135, 90, 45, 22.5, 180, 180, 999, 0, 0, 202.5, 225, 270, 315, 337.5, 225, 247.5, 270, 292.5, 315]
 targetBallPotential = 50000
-enemyBallPotential = -10000
+enemyBallPotential = -200
 
 # Controladores.
 
@@ -43,11 +43,13 @@ angleIntegrative = 0
 
 # Longitudinal
 forward = False
-forwardMaxAngle = 10
+forwardMaxAngle = 12
 longitudalPWM = 45
 maxLongitudinalPD = 15
 lastLongitudinalError = 0
 longitudinalIntegrative = 0
+
+targetDistance = 0.13
 
 class Ball:
   def __init__(self, x, y, radius, color):
@@ -112,7 +114,7 @@ def classifyBall(ball, targetBalls, enemyBalls):
 def leftMotor(pwm, direction):
   # FKLMNA : F: encabezado; K: 0 motor izquierdo, 1 motor derecho; L: 0 hacia atras, 1 hacia adelante; MN % de PWM; A fin de la trama.
   # command = "F0xxxA"
-
+  pwm *= 0.85
   command = "F0"
   command += str(direction)
   command += str(int(pwm / 10))
@@ -122,6 +124,7 @@ def leftMotor(pwm, direction):
 
 def rightMotor(pwm, direction):
   # FKLMNA : F: encabezado; K: 0 motor izquierdo, 1 motor derecho; L: 0 hacia atras, 1 hacia adelante; MN % de PWM; A fin de la trama.
+  pwm *= 1.10
   command = "F1"
   command += str(direction)
   command += str(int(pwm / 10))
@@ -176,6 +179,8 @@ def matrizPotencial(error,vPre,vNow, filapos, columpos):
 def getAngle(matriz,xcar,ycar,anglecar):
   filacar,columcar=getCell(ycar,xcar)
   aux=matriz[filacar-2:filacar+3,columcar-2:columcar+3]
+  # if(np.argmax(aux) == 5):
+
   dif = dicangle[np.argmax(aux)]-anglecar
   if dif > 180:
     dif -= 360
@@ -185,7 +190,7 @@ def getAngle(matriz,xcar,ycar,anglecar):
 
 def rotationalPDController(error, lastError, integrativeError):
   Kp = 0.15
-  Kd = 2
+  Kd = 0.5
   Ki = 0
   integrativeError += lastError
   direction = True
@@ -194,8 +199,8 @@ def rotationalPDController(error, lastError, integrativeError):
   return Kp * error + Kd * (error - lastError) + Ki * integrativeError, direction
 
 def longitudinalPDController(error, lastError, integrativeError):
-  Kp = 5
-  Kd = 0
+  Kp = 0.93
+  Kd = 1
   Ki = 0
   integrativeError += lastError
   return Kp * error + Kd * (error - lastError) + Ki * integrativeError
@@ -205,6 +210,8 @@ def loop():
   global lastRotationalError
   global angleIntegrative
   global lastLongitudinalError
+  global targetDistance
+  targetReached = False
 
   r = requests.get("http://" + ip_address + ":" + port)
   responses = r.json()
@@ -222,31 +229,50 @@ def loop():
     # Calcular la bola mas cercana: nearestBall
 
     # Potencial
-    vPre = np.zeros((celdas, celdas))
-    vNow = np.zeros((celdas, celdas))
+    vPre = 5 * np.ones((celdas, celdas))
+    vNow = 5 * np.ones((celdas, celdas))
     columpos, filapos = [], []
 
-    for ball in targetBalls:
-      setBall(ball.x, ball.y, targetBallPotential, vNow, filapos, columpos)
-    
     for ball in enemyBalls:
-      setBall(ball.x, ball.y, enemyBallPotential, vNow, filapos, columpos)
+      setBall(ball.x, ball.y, enemyBallPotential / (1.3*len(enemyBalls)), vNow, filapos, columpos)
+      # setBall(ball.x + disceldas, ball.y + disceldas, enemyBallPotential, vNow, filapos, columpos)
+      # setBall(ball.x - disceldas, ball.y + disceldas, enemyBallPotential, vNow, filapos, columpos)
+      # setBall(ball.x + disceldas, ball.y - disceldas, enemyBallPotential, vNow, filapos, columpos)
+      # setBall(ball.x - disceldas, ball.y - disceldas, enemyBallPotential, vNow, filapos, columpos)
 
-    nearestBall = targetBalls[0]
+    for ball in targetBalls:
+      setBall(ball.x, ball.y, targetBallPotential*len(enemyBalls), vNow, filapos, columpos)
     
     error = np.max(np.absolute(vNow) - np.absolute(vPre))
     matrizPotencial(error, vPre, vNow, filapos, columpos)
 
+    for ball in enemyBalls:
+      row, column = getCell(ball.y, ball.x)
+      vNow[row - 1, column - 1] = enemyBallPotential
+      vNow[row - 1, column] = enemyBallPotential
+      vNow[row - 1, column + 1] = enemyBallPotential
+      vNow[row, column - 1] = enemyBallPotential
+      vNow[row, column + 1] = enemyBallPotential
+      vNow[row + 1, column - 1] = enemyBallPotential
+      vNow[row + 1, column] = enemyBallPotential
+      vNow[row + 1, column + 1] = enemyBallPotential
 
     # Controladores.
+
     angleError = getAngle(vNow, myRobot.x, myRobot.y, myRobot.angle)
-    print("Error:", angleError)
-    
+
+    if(len(targetBalls) > 0):
+      nearestBall = targetBalls[0]
+      if(myRobot.calculateDistance(nearestBall) <= targetDistance):
+        forward = False
+      if(not forward and abs(angleError) < angleOffset):
+        targetReached = True
+
     if(abs(angleError) < angleOffset):
       #print("Estabilizado")
       forward = True
 
-    if(not forward):
+    if((not forward) and (not targetReached)):
       PD, direction = rotationalPDController(angleError, lastRotationalError, angleIntegrative)
       # Se toma el valor absoluto para tomar en cuenta los ángulos negativos.
       PD = abs(PD)
@@ -257,7 +283,7 @@ def loop():
 
       lastRotationalError = angleError
       serialPort.read(2)
-    else:
+    elif(not targetReached):
       if(abs(angleError) > forwardMaxAngle):
         forward = False
       PD = longitudinalPDController(angleError, lastLongitudinalError, longitudinalIntegrative)
@@ -273,7 +299,9 @@ def loop():
 
       lastLongitudinalError = angleError
       serialPort.read(2)
-      
+    else:
+      stop()
+      serialPort.read(2)
       
 myRobot = Robot(Ball(45, 45, 0, 0), Ball(0, 0, 0, 0))
 
@@ -290,7 +318,7 @@ while(1):
 
 
 # def test():
-#   setMotors(0, 0, 1, 1)
+#   setMotors(40, 40, 1, 1)
 #   # leftMotor(0, 1)
 #   print("Esperando")
 #   data = serialPort.read(1)
