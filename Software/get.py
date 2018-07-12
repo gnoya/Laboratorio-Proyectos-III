@@ -12,7 +12,7 @@ serialPort = serial.Serial('COM3', 9600, timeout=5)
 ip_address = "127.0.0.1"
 port = "8000"
 
-myFrontColor = "BLACK"
+myFrontColor = "GREEN"
 myFrontColor2 = "CYAN"
 myBackColor = "BLUE"
 enemyFrontColor = 0
@@ -165,12 +165,12 @@ def checkBall(fila,colum, filapos, columpos):
     else:
       return False
 
-def matrizPotencial(error,vPre,vNow, filapos, columpos):
+def matrizPotencial(error, vPre, vNow, filapos, columpos):
   while error>limitError:
     for z in range(1,celdas-2):
       for j in range(1,celdas-2):
         if not checkBall(z,j, filapos, columpos):
-          vNow[z][j]=(vNow[z-1][j]+vNow[z+1][j]+vNow[z][j-1]+vNow[z][j+1])/4
+          vNow[z][j]=(vNow[z-1][j] + vNow[z+1][j] + vNow[z][j-1] + vNow[z][j+1] + vNow[z+1][j+1] + vNow[z-1][j-1] + vNow[z+1][j-1] + vNow[z-1][j+1])/8
 
     error=np.max(np.absolute(vNow)-np.absolute(vPre))
     vPre=np.copy(vNow)
@@ -235,10 +235,6 @@ def loop():
 
     for ball in enemyBalls:
       setBall(ball.x, ball.y, enemyBallPotential / (1.3*len(enemyBalls)), vNow, filapos, columpos)
-      # setBall(ball.x + disceldas, ball.y + disceldas, enemyBallPotential, vNow, filapos, columpos)
-      # setBall(ball.x - disceldas, ball.y + disceldas, enemyBallPotential, vNow, filapos, columpos)
-      # setBall(ball.x + disceldas, ball.y - disceldas, enemyBallPotential, vNow, filapos, columpos)
-      # setBall(ball.x - disceldas, ball.y - disceldas, enemyBallPotential, vNow, filapos, columpos)
 
     for ball in targetBalls:
       setBall(ball.x, ball.y, targetBallPotential*len(enemyBalls), vNow, filapos, columpos)
