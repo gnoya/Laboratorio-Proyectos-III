@@ -30,8 +30,8 @@ vNow = 5 * np.ones((celdas,celdas))
 columpos, filapos=[], []
 limitError = 1
 dicangle = [135, 112.5, 90, 67.5, 45, 137.5, 135, 90, 45, 22.5, 180, 180, 999, 0, 0, 202.5, 225, 270, 315, 337.5, 225, 247.5, 270, 292.5, 315]
-targetBallPotential = 400000
-enemyBallPotential = -100
+targetBallPotential = 4000
+enemyBallPotential = -10
 
 # Controladores.
 
@@ -41,7 +41,7 @@ lastRotationalError = 0
 minRotatingPWM = 25
 angleIntegrative = 0
 
-# Longitudinal
+# Lateral
 forward = False
 forwardMaxAngle = 25
 longitudalPWM = 45
@@ -50,6 +50,10 @@ lastLongitudinalError = 0
 longitudinalIntegrative = 0
 
 targetDistance = 0.13
+targetReached = False
+
+goalX = 0.78
+goalY = 0.5
 
 class Ball:
   def __init__(self, x, y, radius, color):
@@ -178,7 +182,9 @@ def matrizPotencial(error, vPre, vNow, filapos, columpos):
 
 def getAngle(matriz,xcar,ycar,anglecar):
   filacar,columcar=getCell(ycar,xcar)
+  #print(filacar, columcar)
   aux=matriz[filacar-2:filacar+3,columcar-2:columcar+3]
+  
   print(aux)
   # if(np.argmax(aux) == 5):
   dif = dicangle[np.argmax(aux)]-anglecar
@@ -212,7 +218,7 @@ def loop():
   global angleIntegrative
   global lastLongitudinalError
   global targetDistance
-  targetReached = False
+  global targetReached
 
   r = requests.get("http://" + ip_address + ":" + port)
   responses = r.json()
@@ -233,7 +239,6 @@ def loop():
     vPre = 5 * np.ones((celdas, celdas))
     vNow = 5 * np.ones((celdas, celdas))
     columpos, filapos = [], []
-
 
     for ball in enemyBalls:
       setBall(ball.x, ball.y, enemyBallPotential, vNow, filapos, columpos)
@@ -256,18 +261,12 @@ def loop():
 
     nearest = np.argmin(distances)
     nearestBall = targetBalls[nearest]
-    print(nearestBall.x, nearestBall.y)
     setBall(nearestBall.x, nearestBall.y, targetBallPotential, vNow, filapos, columpos)
-
-    # for ball in targetBalls:
-    #   setBall(ball.x, ball.y, targetBallPotential, vNow, filapos, columpos)
-
+    print("Going to:", nearestBall.x, nearestBall.y)
+    print(" ")
     error = np.max(np.absolute(vNow) - np.absolute(vPre))
     matrizPotencial(error, vPre, vNow, filapos, columpos)
-
-    # error = np.max(np.absolute(vNow) - np.absolute(vPre))
-    # matrizPotencial(error, vPre, vNow, filapos, columpos)
-
+    
     for ball in enemyBalls:
       row, column = getCell(ball.y, ball.x)
       # for i in range(1, 3):7
@@ -281,26 +280,19 @@ def loop():
       vNow[row + i, column] = enemyBallPotential
       vNow[row + i, column + i] = enemyBallPotential
 
-      # vNow[row - 1, column -2] = enemyBallPotential
-      # vNow[row + 1, column -2] = enemyBallPotential
-      # vNow[row - 1, column +2] = enemyBallPotential
-      # vNow[row + 1, column +2] = enemyBallPotential
-      # vNow[row - 2, column + 1] = enemyBallPotential
-      # vNow[row + 2, column - 1] = enemyBallPotential
-
+    # row, column = getCell(nearestBall.y, nearestBall.x)
+    # vNow[row, column] = targetBallPotential
     # Controladores.
 
+    #print("OMW")
+    #print(vNow, myRobot.x, myRobot.y, myRobot.angle)
     angleError = getAngle(vNow, myRobot.x, myRobot.y, myRobot.angle)
-    print(angleError)
     if(len(targetBalls) > 0):
       #nearestBall = targetBalls[0]
       if(myRobot.calculateDistance(nearestBall) <= targetDistance):
-        forward = False
-      if(not forward and abs(angleError) < angleOffset):
-        targetReached = True
+        targetReached = True     
 
     if(abs(angleError) < angleOffset):
-      #print("Estabilizado")
       forward = True
 
     if((not forward) and (not targetReached)):
@@ -324,23 +316,104 @@ def loop():
         setMotors(longitudalPWM, longitudalPWM + PD, 1, 1)
       else:
         setMotors(longitudalPWM + PD, longitudalPWM, 1, 1)
-
       lastLongitudinalError = angleError
       serialPort.read(2)
     else:
       stop()
       serialPort.read(2)
       
+
+def comeback():
+  global forward
+  global lastRotationalError
+  global angleIntegrative
+  global lastLongitudinalError
+  global targetDistance
+  global targetReached
+
+  r = requests.get("http://" + ip_address + ":" + port)
+  responses = r.json()
+  targetBalls = []
+  enemyBalls = []
+  for response in responses:
+    ball = createBall(response)
+    classifyBall(ball, targetBalls, enemyBalls)
+
+  myRobot.updateCoordinates()
+  myRobot.updateAngle()
+
+  vPre = 5 * np.ones((celdas, celdas))
+  vNow = 5 * np.ones((celdas, celdas))
+  columpos, filapos = [], []
+
+  setBall(goal.x, goal.y, targetBallPotential, vNow, filapos, columpos)
+
+  error = np.max(np.absolute(vNow) - np.absolute(vPre))
+  matrizPotencial(error, vPre, vNow, filapos, columpos)
+
+  for ball in enemyBalls:
+    row, column = getCell(ball.y, ball.x)
+    i = 1
+    vNow[row - i, column - i] = enemyBallPotential
+    vNow[row - i, column] = enemyBallPotential
+    vNow[row - i, column + i] = enemyBallPotential
+    vNow[row, column - i] = enemyBallPotential
+    vNow[row, column + i] = enemyBallPotential
+    vNow[row + i, column - i] = enemyBallPotential
+    vNow[row + i, column] = enemyBallPotential
+    vNow[row + i, column + i] = enemyBallPotential
+
+  print("Volviendo")
+  angleError = getAngle(vNow, myRobot.x, myRobot.y, myRobot.angle)
+
+  if(abs(angleError) < angleOffset):
+    forward = True
+
+  if(myRobot.calculateDistance(goal) < targetDistance):
+    pass
+    #xD
+  
+  if(not forward):
+    PD, direction = rotationalPDController(angleError, lastRotationalError, angleIntegrative)
+    # Se toma el valor absoluto para tomar en cuenta los ángulos negativos.
+    PD = abs(PD)
+    if(PD > minRotatingPWM):
+      PD = minRotatingPWM
+    PWM = minRotatingPWM + PD
+    setMotors(PWM, PWM, int(not direction), int(direction)) # direction: 1 antihorario. 0 horario.
+    lastRotationalError = angleError
+    serialPort.read(2)
+  else:
+    if(abs(angleError) > forwardMaxAngle):
+      forward = False
+    PD = longitudinalPDController(angleError, lastLongitudinalError, longitudinalIntegrative)
+    PD = abs(PD)
+    if(PD > maxLongitudinalPD):
+      PD = maxLongitudinalPD
+    if(angleError >= 0):
+      setMotors(longitudalPWM, longitudalPWM + PD, 1, 1)
+    else:
+      setMotors(longitudalPWM + PD, longitudalPWM, 1, 1)
+    lastLongitudinalError = angleError
+    serialPort.read(2)
+
 myRobot = Robot(Ball(45, 45, 0, 0), Ball(0, 0, 0, 0))
+goal = Ball(goalX, goalY, None, None)
 
 while(1):
   try:
-    loop()
-    #setMotors(30, 60, 1, 1)
+    if(not targetReached):
+      loop()
+    else:
+      comeback()
+      # setMotors(30, 60, 1, 1)
+      # serialPort.read(2)
   except KeyboardInterrupt:
     stop()
     print("Detener")
     sys.exit()
+  except:
+    stop()
 
 
 
