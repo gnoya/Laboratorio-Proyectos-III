@@ -12,7 +12,7 @@ serialPort = serial.Serial('COM3', 9600, timeout=5)
 ip_address = "127.0.0.1"
 port = "8000"
 
-myFrontColor = "GREEN"
+myFrontColor = "BLACK"
 myFrontColor2 = "CYAN"
 myBackColor = "BLUE"
 enemyFrontColor = 0
@@ -30,8 +30,8 @@ vNow = 5 * np.ones((celdas,celdas))
 columpos, filapos=[], []
 limitError = 1
 dicangle = [135, 112.5, 90, 67.5, 45, 137.5, 135, 90, 45, 22.5, 180, 180, 999, 0, 0, 202.5, 225, 270, 315, 337.5, 225, 247.5, 270, 292.5, 315]
-targetBallPotential = 50000
-enemyBallPotential = -200
+targetBallPotential = 400000
+enemyBallPotential = -100
 
 # Controladores.
 
@@ -43,7 +43,7 @@ angleIntegrative = 0
 
 # Longitudinal
 forward = False
-forwardMaxAngle = 12
+forwardMaxAngle = 25
 longitudalPWM = 45
 maxLongitudinalPD = 15
 lastLongitudinalError = 0
@@ -179,9 +179,10 @@ def matrizPotencial(error, vPre, vNow, filapos, columpos):
 def getAngle(matriz,xcar,ycar,anglecar):
   filacar,columcar=getCell(ycar,xcar)
   aux=matriz[filacar-2:filacar+3,columcar-2:columcar+3]
+  print(aux)
   # if(np.argmax(aux) == 5):
-
   dif = dicangle[np.argmax(aux)]-anglecar
+
   if dif > 180:
     dif -= 360
   elif dif < -180:
@@ -233,32 +234,66 @@ def loop():
     vNow = 5 * np.ones((celdas, celdas))
     columpos, filapos = [], []
 
+
     for ball in enemyBalls:
-      setBall(ball.x, ball.y, enemyBallPotential / (1.3*len(enemyBalls)), vNow, filapos, columpos)
+      setBall(ball.x, ball.y, enemyBallPotential, vNow, filapos, columpos)
+      setBall(ball.x + disceldas, ball.y, enemyBallPotential, vNow, filapos, columpos)
+      setBall(ball.x, ball.y + disceldas, enemyBallPotential, vNow, filapos, columpos)
+      setBall(ball.x - disceldas, ball.y, enemyBallPotential, vNow, filapos, columpos)
+      setBall(ball.x, ball.y - disceldas, enemyBallPotential, vNow, filapos, columpos)
+
+      # setBall(ball.x + 2*disceldas, ball.y, enemyBallPotential, vNow, filapos, columpos)
+      # setBall(ball.x, ball.y + 2*disceldas, enemyBallPotential, vNow, filapos, columpos)
+      # setBall(ball.x - 2*disceldas, ball.y, enemyBallPotential, vNow, filapos, columpos)
+      # setBall(ball.x, ball.y - 2*disceldas, enemyBallPotential, vNow, filapos, columpos)
+
+    distances = []
 
     for ball in targetBalls:
-      setBall(ball.x, ball.y, targetBallPotential*len(enemyBalls), vNow, filapos, columpos)
-    
+      temporalDistance = myRobot.calculateDistance(ball)
+      if(temporalDistance > 0.075):
+        distances.append(temporalDistance)
+
+    nearest = np.argmin(distances)
+    nearestBall = targetBalls[nearest]
+    print(nearestBall.x, nearestBall.y)
+    setBall(nearestBall.x, nearestBall.y, targetBallPotential, vNow, filapos, columpos)
+
+    # for ball in targetBalls:
+    #   setBall(ball.x, ball.y, targetBallPotential, vNow, filapos, columpos)
+
     error = np.max(np.absolute(vNow) - np.absolute(vPre))
     matrizPotencial(error, vPre, vNow, filapos, columpos)
 
+    # error = np.max(np.absolute(vNow) - np.absolute(vPre))
+    # matrizPotencial(error, vPre, vNow, filapos, columpos)
+
     for ball in enemyBalls:
       row, column = getCell(ball.y, ball.x)
-      vNow[row - 1, column - 1] = enemyBallPotential
-      vNow[row - 1, column] = enemyBallPotential
-      vNow[row - 1, column + 1] = enemyBallPotential
-      vNow[row, column - 1] = enemyBallPotential
-      vNow[row, column + 1] = enemyBallPotential
-      vNow[row + 1, column - 1] = enemyBallPotential
-      vNow[row + 1, column] = enemyBallPotential
-      vNow[row + 1, column + 1] = enemyBallPotential
+      # for i in range(1, 3):7
+      i = 1
+      vNow[row - i, column - i] = enemyBallPotential
+      vNow[row - i, column] = enemyBallPotential
+      vNow[row - i, column + i] = enemyBallPotential
+      vNow[row, column - i] = enemyBallPotential
+      vNow[row, column + i] = enemyBallPotential
+      vNow[row + i, column - i] = enemyBallPotential
+      vNow[row + i, column] = enemyBallPotential
+      vNow[row + i, column + i] = enemyBallPotential
+
+      # vNow[row - 1, column -2] = enemyBallPotential
+      # vNow[row + 1, column -2] = enemyBallPotential
+      # vNow[row - 1, column +2] = enemyBallPotential
+      # vNow[row + 1, column +2] = enemyBallPotential
+      # vNow[row - 2, column + 1] = enemyBallPotential
+      # vNow[row + 2, column - 1] = enemyBallPotential
 
     # Controladores.
 
     angleError = getAngle(vNow, myRobot.x, myRobot.y, myRobot.angle)
-
+    print(angleError)
     if(len(targetBalls) > 0):
-      nearestBall = targetBalls[0]
+      #nearestBall = targetBalls[0]
       if(myRobot.calculateDistance(nearestBall) <= targetDistance):
         forward = False
       if(not forward and abs(angleError) < angleOffset):
@@ -276,7 +311,6 @@ def loop():
         PD = minRotatingPWM
       PWM = minRotatingPWM + PD
       setMotors(PWM, PWM, int(not direction), int(direction)) # direction: 1 antihorario. 0 horario.
-
       lastRotationalError = angleError
       serialPort.read(2)
     elif(not targetReached):
@@ -287,10 +321,8 @@ def loop():
       if(PD > maxLongitudinalPD):
         PD = maxLongitudinalPD
       if(angleError >= 0):
-        print("PWMS: Left:", longitudalPWM, "Right:", (longitudalPWM+PD))
         setMotors(longitudalPWM, longitudalPWM + PD, 1, 1)
       else:
-        print("PWMS: Left:", (longitudalPWM + PD), "Right:", longitudalPWM)
         setMotors(longitudalPWM + PD, longitudalPWM, 1, 1)
 
       lastLongitudinalError = angleError
