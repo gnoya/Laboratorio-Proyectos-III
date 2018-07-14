@@ -13,6 +13,10 @@ extern char greenRange[10];
 extern char blueRange[10];
 extern char TC[40];
 
+int motor;
+int direction;
+int pwm;
+	
 void delayMS(int ms){
 	Cpu_Delay100US(10*ms);
 }
@@ -48,6 +52,26 @@ void sendString(char string[], int choice){
 	}
 	else{
 	}
+}
+
+void sendString2(char string[], int choice){
+	int i;
+	//char carry = 0x0D;
+	//string[5] = (char) 13;
+	
+	for(i = 0; i < strlen(string); i++){
+		if(choice == 1){
+		  AS1_SendChar(string[i]);
+		}
+		else if (choice == 2){
+		  AS2_SendChar(string[i]);
+		}
+		else{
+		  AS1_SendChar(string[i]);
+		  AS2_SendChar(string[i]);
+		}
+	}
+	//AS2_SendChar(13); // \r.
 }
 
 int asciiToInt(char ascii){
@@ -128,8 +152,6 @@ void readLine(char line[]){
   }
   i = 0;
   
-  
-  
   while(1){
 	//AS2_SendChar('w');
     if(AS1_RecvChar(&charact) != ERR_RXEMPTY){
@@ -141,6 +163,27 @@ void readLine(char line[]){
       line[i] = charact;
       i++;
       //AS2_SendChar(charact);
+    }
+  }
+}
+
+void readLine2(char line[]){
+  unsigned char charact;
+  int i = 0;
+
+  for(i = 0; i < 50; i++){
+	  line[i] = 0;
+  }
+  i = 0;
+  
+  while(1){
+    if(AS2_RecvChar(&charact) != ERR_RXEMPTY){
+      if((int)charact == 65) { // A
+    	  line[i] = charact;
+    	  break;
+      }
+      line[i] = charact;
+      i++;
     }
   }
 }
@@ -172,30 +215,65 @@ void getMassCenter(char line[]){
 
 
 // Definicion
-void Set_PWM1(unsigned short porcentaje, bool dir){
+void setRightPWM(unsigned short porcentaje, bool dir){
 	unsigned short parametro;
 	parametro = 65535*(porcentaje)/100;
 	PWM1_SetRatio16(parametro);
 	Bit1_PutVal(dir);
 }
-void Set_PWM2(unsigned short porcentaje, bool dir){
+
+void setLeftPWM(unsigned short porcentaje, bool dir){
 	unsigned short parametro;
-	parametro = (65535*(porcentaje)/100)*(1.7/1.5);
+	parametro = (65535*(porcentaje)/100);
 	PWM2_SetRatio16(parametro);
 	Bit2_PutVal(dir);
 }
 void Set_PWM(unsigned short porcentaje1, unsigned short porcentaje2, bool dir1, bool dir2){
+	
 	if(dir1){
-		Set_PWM1(100 - porcentaje1, dir1);
+		setRightPWM(100 - porcentaje1, dir1);
 	} 
 	else{
-		Set_PWM1(porcentaje1, dir1);
+		setRightPWM(porcentaje1, dir1);
 	}
 	
 	if(dir2){
-		Set_PWM2(100 - porcentaje2, dir2);
+		setLeftPWM(100 - porcentaje2, dir2);
 	}
 	else{
-		Set_PWM2(porcentaje2, dir2);
+		setLeftPWM(porcentaje2, dir2);
 	}
+	
+}
+
+void setPWM(unsigned short leftPWM, unsigned short rightPWM, unsigned short leftDir, unsigned short rightDir){
+	if(leftDir == 1){
+		setLeftPWM(leftPWM, 0);
+	} else {
+		setLeftPWM(100 - leftPWM, 1);
+	}
+	
+	if(rightDir == 1){
+		setRightPWM(rightPWM, 0);
+	} else {
+		setRightPWM(100 - rightPWM, 1);
+	}
+}
+
+int getMotorData(char line[], unsigned short *leftPWM, unsigned short *rightPWM, unsigned short *leftDir, unsigned short *rightDir){
+	if((int)line[0] != 70) return 0;
+	
+	motor = asciiToInt(line[1]);
+	direction = asciiToInt(line[2]);
+	pwm = asciiToInt(line[3])*10 + asciiToInt(line[4]);
+	
+	if(motor == 0){
+		*leftDir = direction;
+		*leftPWM = pwm;
+	}
+	else if (motor == 1){
+		*rightDir = direction;
+		*rightPWM = pwm;
+	}
+	return 1;
 }
