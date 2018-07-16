@@ -28,8 +28,8 @@ El robot debía cumplir con objetivos específicos cómo: ir en línea recta, ro
 
 ![prueba](https://github.com/gnoya/Laboratorio-Proyectos-III/blob/master/images/Software/Campos%20de%20velocidad/prueba.jpg)
 
-**Prueba de controlador de rotación: ** [[https://www.youtube.com/watch?v=wHzBCTyHemU]]
+**Prueba de controlador de rotación**: [[https://www.youtube.com/watch?v=wHzBCTyHemU]]
 
-**Prueba de trayectoria: ** [[https://www.youtube.com/watch?v=ZJQzBf2cvIc]]
+**Prueba de trayectoria**: [[https://www.youtube.com/watch?v=ZJQzBf2cvIc]]
 
 Este proyecto fue realizado bajo la tutela del profesor [José Cappelletto](https://github.com/cappelletto) y su ayudante académico [Said Alvarado](https://github.com/SaidAlvarado/).
